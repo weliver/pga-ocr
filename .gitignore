@@ -1,3 +1,6 @@
+# Where tokens live
+config.json
+
 # Logs
 logs
 *.log

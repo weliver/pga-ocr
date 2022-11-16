@@ -1,0 +1,27 @@
+{
+  "name": "pga-ocr",
+  "version": "0.0.1",
+  "description": "An OCR for scraping PGA scoreboard data",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/weliver/pga-ocr.git"
+  },
+  "author": "jamie weliver",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/weliver/pga-ocr/issues"
+  },
+  "homepage": "https://github.com/weliver/pga-ocr#readme",
+  "dependencies": {
+    "bufferutil": "^4.0.7",
+    "discord.js": "^14.6.0",
+    "utf-8-validate": "^5.0.10"
+  },
+  "devDependencies": {
+    "eslint": "^8.27.0"
+  }
+}
