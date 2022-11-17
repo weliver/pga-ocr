@@ -1,45 +1,27 @@
-const fs = require('node:fs');
-const path = require('node:path');
 const createCsvWriter = require('csv-writer').createObjectCsvWriter;
-
+const fetch = require('node-fetch');
+const path = require('node:path');
+const sharp = require('sharp');
 const Tesseract = require('tesseract.js');
 
-const sharp = require('sharp');
-const { ConnectionService } = require('discord.js');
 
+// For hacking about and testing your sanity
 const mockInput = {
-  society: "Kinetic",
   eventName: "Emerald Basin Reserve TGC",
-  eventDate: "Nov 13 - Nov 19",
-  screenShots: [
-    'kinetic-hd-1.jpg',
-    'kinetic-hd-2.jpg',
-    'kinetic-hd-3.jpg',
-    'kinetic-hd-4.jpg',
-    // 'rotg-persephone-1.jpg',
-    // 'rotg-persephone-2.jpg'
+  screenshots: [
+    'https://cdn.discordapp.com/attachments/796765629856219146/1042914505979609178/kinetic-hd-1.jpg',
+    'https://cdn.discordapp.com/attachments/796765629856219146/1042914506302558279/kinetic-hd-2.jpg',
+    'https://cdn.discordapp.com/attachments/796765629856219146/1042914506642309250/kinetic-hd-3.jpg',
+    'https://cdn.discordapp.com/attachments/796765629856219146/1042914507032367154/kinetic-hd-4.jpg'
   ]
 };
 
 
-const scoreboardScraper = (
+const scoreboardScraper = async (
   params
-) => {
-  console.log("scoreboardScrape", params);
-  processImages(params.screenShots).then(async res => {
-    console.log("processImage complete", res);
-    return await tessList(res, params);
-  }).catch(err => console.error("error", err));
-};
-
-// const testImagePath = path.join(__dirname, 'test-images', 'rotg-persephone-1.jpg');
-// const testImagePath = path.join(__dirname, 'test-images', 'kinetic-hd-1.jpg');
-// const testImagePath = path.join(__dirname, 'test-images', 'rotg-persephone-1-inverted.jpg');
-// const testImagePath = path.join(__dirname, 'test-images', 'single-row-test-inverted.jpg');
-// const testImagePath = path.join(__dirname, 'test-images', 'column-test.jpg');
-// const testImagePath = path.join(__dirname, 'test-images', 'column-test-inverted.jpg');
-// const testImagePath = path.join(__dirname, 'test-images', 'ElbnDol3Ro.jpg');
-// const testImagePath = path.join(__dirname, 'test-images', 'score-row.jpg');
+) => processImages(params.screenshots)
+  .then(res => tessList(res, params))
+  .catch(err => console.error("error", err));
 
 // @TODO parameterize input based on image size.
 const captureAreas = {
@@ -83,63 +65,69 @@ const captureAreas = {
 
 
 
+// @TODO Clean up your promises, buddy.
 const processImages = async (images) => {
 
   const scoreList = {};
   const promises = [];
 
-  let imgCount = 0;
-  await images.map(async img => {
-    imgCount++;
-    // @todo confirm imagePath w/ params is okay
-    // const imagePath = path.join(__dirname, 'test-images', img);
-    const imagePath = img;
-
-    await Object.keys(captureAreas).map(async area => {
-      //@TODO parameterize 10 count
-      for (let i = 0; i < 10; i++) {
-        const ref = `${imgCount}${i}`;
-        const areaCropFile = path.join(__dirname, 'public', 'images', 'processed', `${ref}-${area}.jpg`);
-        promises.push(
-          sharp(imagePath)
-            .extract({
-              ...captureAreas[area],
-              top: (captureAreas[area].top + (60 * i)) + 15,
-            })
-            .negate()
-            .grayscale()
-            .gamma(1, 3)
-            .threshold(90)
-            .toFile(areaCropFile)
-            .then(info => {
-              scoreList[ref] = {
-                ...scoreList[ref],
-                [area]: areaCropFile
-              };
-            })
-            .catch(err => {
-              console.error("sharp error", err);
-            })
-        );
-      }
+  const fetchImages = await images.map(async img => {
+    const imagePath = await fetch(img);
+    return await imagePath.buffer();
+  });
+  await Promise.all(fetchImages).then(async fetchedImages => {
+    let imgCount = 0;
+    fetchedImages.map(ib => {
+      imgCount++;
+      Object.keys(captureAreas).map(async area => {
+        //@TODO set up params for row count
+        for (let i = 0; i < 10; i++) {
+          const ref = `${imgCount}${i}`;
+          const areaCropFile = path.join(__dirname, 'public', 'images', 'processed', `${ref}-${area}.jpg`);
+          promises.push(
+            sharp(ib)
+              .extract({
+                ...captureAreas[area],
+                top: (captureAreas[area].top + (60 * i)) + 15,
+              })
+              .negate()
+              .grayscale()
+              .gamma(1, 3)
+              .threshold(90)
+              .toFile(areaCropFile)
+              .then(info => {
+                scoreList[ref] = {
+                  ...scoreList[ref],
+                  [area]: areaCropFile
+                };
+              })
+              .catch(err => {
+                console.error("Error while processing images with Sharp", err);
+              })
+          );
+        }
+      });
     });
   });
-  const finalResult = await Promise.all(promises).then(e => scoreList).catch(err => console.error("finalResult fail", err));
+
+  const finalResult = Promise.all(promises).then(e => {
+    console.log("scorelist", scoreList);
+    return scoreList;
+  }).catch(err => console.error("finalResult fail", err));
   return finalResult;
 };
 
 const worker = Tesseract.createWorker();
 const tessList = async (images, params) => {
-  console.log("tessList images", images);
   await worker.load();
   await worker.loadLanguage('eng');
   await worker.initialize('eng');
-  console.log("scoreList", images);
+
   const output = {};
+
   try {
     for (const area of Object.keys(captureAreas)) {
       for (const i of Object.keys(images)) {
-        console.log(`working on area`, images[i][area]);
         const { data: { text } } = await worker.recognize(images[i][area]);
         output[i] = {
           ...output[i],
@@ -149,15 +137,10 @@ const tessList = async (images, params) => {
 
     }
   } catch (e) {
-    console.log("error", e);
+    console.error("Error in Tesseract recognize", e);
   }
 
-  const sortObject = obj => Object.keys(obj).sort().reduce((res, key) => (res[key] = obj[key], res), {});
-  const sorted = sortObject(output);
-  // console.log(sorted);
-  // console.log(Object.values(sorted));
-
-  const csvFileName = `${params.society}-${params.eventName}-${params.eventDate}-${Date.now()}.csv`;
+  const csvFileName = `${params.eventName}-${Date.now()}.csv`;
   const csvWriter = createCsvWriter({
     path: path.join(__dirname, 'public', 'csv', csvFileName),
     header: [
@@ -187,60 +170,34 @@ const tessList = async (images, params) => {
       },
     ]
   });
-  csvWriter
-    .writeRecords(Object.values(output))
-    .then(() => {
-      console.log(".csv created: ", csvFileName);
 
+  const finalFile = await csvWriter
+    .writeRecords(Object.values(output))
+    .then(c => {
+      console.log(".csv created: ", csvFileName);
+      return csvFileName;
     })
     .catch(err => {
       console.error("error creating .csv", err);
     });
-
   await worker.terminate();
 
+  return finalFile;
 };
 
-if (process.argv.length > 0) {
-  console.log("Using CLI");
-  const [society, eventName, eventDate, ...screenShots] = process.argv.slice(2);
-  scoreboardScraper({
-    society,
-    eventName,
-    eventDate,
-    screenShots
-  });
-}
 
+// For testing w/ CLI
+// if (process.argv.length > 0) {
+//   console.log("Using CLI");
+//   const [eventName, ...screenshots] = process.argv.slice(2);
+//   scoreboardScraper({
+//     eventName,
+//     screenshots
+//   });
+// }
+// scoreboardScraper(mockInput);
 
 
 module.exports = {
   scoreboardScraper
 };
-
-
-
-
-
-
-// tessList(scoreList);
-
-// (async() => {
-//   await worker.load();
-//   await worker.loadLanguage('eng');
-//   await worker.initialize('eng');
-//   const { data: { text } } = await worker.recognize(testImagePath, { firstRow });
-//   console.log(text);
-//   await worker.terminate();
-// })();
-
-// const tess = (path) => Tesseract.recognize(
-//   path,
-//   'eng',
-//   // {
-//   //   logger: m => console.log(m),
-//   //   // rectangle: firstRow
-//   // }
-// ).then(({ data: { text, ...rest } }) => {
-//   console.log(text);
-// });

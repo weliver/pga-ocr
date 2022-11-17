@@ -1,98 +1,62 @@
-const { ActionRowBuilder } = require('@discordjs/builders');
-const { TextInputBuilder, TextInputStyle, SlashCommandBuilder, ModalBuilder, awaitMessages } = require('discord.js');
+const path = require('node:path');
+const { SlashCommandBuilder, AttachmentBuilder } = require('discord.js');
 
-const { scoreboardScraper } = require('./scoreboard.js');
+const { scoreboardScraper } = require('../scoreboard-scraper.js');
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('scoreboard')
-    .setDescription('Process scoreboard images.'),
+    .setDescription('Process scoreboard images.')
+    .addStringOption(option =>
+      option
+        .setName('eventname')
+        .setDescription('name of society event')
+    ),
   async execute(interaction) {
-    // console.log("interaction", interaction);
-    // interaction.guild is the object representing the Guild in which the command was run
-    // await interaction.reply(`This server is ${interaction.guild.name} and has ${interaction.guild.memberCount} members.`);
 
-    const modal = new ModalBuilder()
-      .setCustomId('scoreboard-modal')
-      .setTitle('Society Leaderboard Scraper');
+    const eventName = interaction.options.getString('eventname') ?? 'society-event';
 
-    const societyName = new TextInputBuilder()
-      .setCustomId('society-name-input')
-      .setLabel('Society Name')
-      .setStyle(TextInputStyle.Short);
+    await interaction.reply({
+      content: `Upload image(s) for ${eventName}`,
+      fetchReply: true
+    }).then(() => {
+      console.log("inside reply then");
+      interaction.channel.awaitMessages({
+        filter: m => {
+          return true;
+        },
+        max: 1,
+        time: 40000,
+        errors: ['time']
+      }).then(async collected => {
+        // console.log("collected messages", collected);
 
-    const eventName = new TextInputBuilder()
-      .setCustomId('society-event-input')
-      .setLabel('Event Name')
-      .setStyle(TextInputStyle.Short);
-    const eventDate = new TextInputBuilder()
-      .setCustomId('event-date-input')
-      .setLabel('Event Date')
-      .setStyle(TextInputStyle.Short);
+        console.log("collected attachments", collected.first().attachments);
 
-    const actionRows = [
-      new ActionRowBuilder().addComponents(societyName),
-      new ActionRowBuilder().addComponents(eventName),
-      new ActionRowBuilder().addComponents(eventDate),
-    ];
+        interaction.followUp('Processing message...');
 
-    modal.addComponents(...actionRows);
+        try {
+          if (collected.first().attachments) {
 
-    await interaction.showModal(modal);
-
-    const submitted = await interaction.awaitModalSubmit({
-      time: 60000,
-      filter: i => i.user.id === interaction.user.id
-    }).catch(err => {
-      console.error(err);
-      return null;
+            const scoreboardParams = {
+              eventName: eventName,
+              screenshots: collected.first().attachments.map(att => att.url)
+            };
+            await scoreboardScraper(scoreboardParams).then(res => {
+              if (res) {
+                const file = new AttachmentBuilder(path.join('public', 'csv', res));
+                interaction.channel.send({ files: [file] });
+              }
+            });
+          }
+        } catch (e) {
+          console.error("Error submitting uploads to scraper.", e);
+        }
+      })
+        .catch(err => {
+          console.error("No responses registered", err);
+          interaction.followUp('Timeout after 40 seconds: I stopped checking for images. Please try again.', err);
+        });
     });
-
-    if (submitted) {
-      submitted.reply({
-        content: "Thanks!",
-        fetchReply: true
-      }).then(() => {
-        console.log("inside reply then");
-        console.log("interaction...", interaction);
-        console.log("interaction user.id", interaction.user.id);
-        interaction.channel.awaitMessages({
-          // filter: m => {
-          //   console.log("filter check", m.author.id == interaction.user.id);
-          //   return m.author.id == interaction.user.id;
-          // },
-          time: 30000,
-          errors: ['time']
-        }).then(collected => {
-          console.log("collected messages", collected);
-
-          console.log("attachments", collected.first().attachments);
-          interaction.followUp('Processing images...');
-
-          // try {
-          //   if (collected.first().attachments) {
-
-          //     const scoreboardParams = {
-          //       society: interaction.fieds.getTextInputValue('society-name-input'),
-          //       eventName: interaction.fieds.getTextInputValue('society-event-input'),
-          //       eventDate: interaction.fieds.getTextInputValue('event-date-input'),
-          //       screenShots: collected.first().attachments.map(att => att.url)
-          //     };
-
-          //     console.log("Submitting params", scoreboardParams);
-          //     scoreboardScraper(scoreboardParams);
-          //   }
-          // } catch (e) {
-          //   console.err("error in scraper", e);
-          // }
-
-
-
-        })
-          .catch(err => {
-            interaction.followUp('Done listening.', err);
-          });
-      });
-    }
   }
 };
