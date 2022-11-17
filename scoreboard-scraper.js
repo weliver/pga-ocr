@@ -7,7 +7,6 @@ const Tesseract = require('tesseract.js');
 const sharp = require('sharp');
 const { ConnectionService } = require('discord.js');
 
-
 const mockInput = {
   society: "Kinetic",
   eventName: "Emerald Basin Reserve TGC",
@@ -23,11 +22,18 @@ const mockInput = {
 };
 
 
-const testImagePath = path.join(__dirname, 'test-images', 'rotg-persephone-1.jpg');
+const scoreboardScrape = (
+  params
+) => {
+  console.log("scoreboardScrape", params);
+  processImages(params.screenShots).then(async res => {
+    console.log("processImage complete", res);
+    return await tessList(res, params);
+  }).catch(err => console.error("error", err));
+};
+
+// const testImagePath = path.join(__dirname, 'test-images', 'rotg-persephone-1.jpg');
 // const testImagePath = path.join(__dirname, 'test-images', 'kinetic-hd-1.jpg');
-
-
-
 // const testImagePath = path.join(__dirname, 'test-images', 'rotg-persephone-1-inverted.jpg');
 // const testImagePath = path.join(__dirname, 'test-images', 'single-row-test-inverted.jpg');
 // const testImagePath = path.join(__dirname, 'test-images', 'column-test.jpg');
@@ -35,6 +41,7 @@ const testImagePath = path.join(__dirname, 'test-images', 'rotg-persephone-1.jpg
 // const testImagePath = path.join(__dirname, 'test-images', 'ElbnDol3Ro.jpg');
 // const testImagePath = path.join(__dirname, 'test-images', 'score-row.jpg');
 
+// @TODO parameterize input based on image size.
 const captureAreas = {
   player: {
     left: 270,
@@ -67,9 +74,9 @@ const captureAreas = {
     height: 40
   },
   final: {
-    left: 1720,
+    left: 1710,
     top: 340,
-    width: 40,
+    width: 60,
     height: 40
   }
 };
@@ -84,12 +91,15 @@ const processImages = async (images) => {
   let imgCount = 0;
   await images.map(async img => {
     imgCount++;
-    const imagePath = path.join(__dirname, 'test-images', img);
-    await Object.keys(captureAreas).map(async area => {
+    // @todo confirm imagePath w/ params is okay
+    // const imagePath = path.join(__dirname, 'test-images', img);
+    const imagePath = img;
 
+    await Object.keys(captureAreas).map(async area => {
+      //@TODO parameterize 10 count
       for (let i = 0; i < 10; i++) {
         const ref = `${imgCount}${i}`;
-        const areaCropFile = path.join(__dirname, 'test-images', 'processed', `${ref}-${area}.jpg`);
+        const areaCropFile = path.join(__dirname, 'public', 'images', 'processed', `${ref}-${area}.jpg`);
         promises.push(
           sharp(imagePath)
             .extract({
@@ -118,19 +128,8 @@ const processImages = async (images) => {
   return finalResult;
 };
 
-processImages(mockInput.screenShots).then(async res => {
-  console.log("processImage complete", res);
-  return await tessList(res);
-})
-  .catch(err => console.error("error", err));
-// .finally(() => {
-//   console.log("end");
-//   process.exit();
-// });
-
-
 const worker = Tesseract.createWorker();
-const tessList = async (images) => {
+const tessList = async (images, params) => {
   console.log("tessList images", images);
   await worker.load();
   await worker.loadLanguage('eng');
@@ -153,11 +152,12 @@ const tessList = async (images) => {
     console.log("error", e);
   }
 
+  const sortObject = obj => Object.keys(obj).sort().reduce((res, key) => (res[key] = obj[key], res), {});
   const sorted = sortObject(output);
-  console.log(sorted);
+  // console.log(sorted);
   // console.log(Object.values(sorted));
 
-  const csvFileName = `${mockInput.society}-${mockInput.eventName}-${mockInput.eventDate}-${Date.now()}.csv`;
+  const csvFileName = `${params.society}-${params.eventName}-${params.eventDate}-${Date.now()}.csv`;
   const csvWriter = createCsvWriter({
     path: path.join(__dirname, 'public', 'csv', csvFileName),
     header: [
@@ -189,13 +189,40 @@ const tessList = async (images) => {
   });
   csvWriter
     .writeRecords(Object.values(output))
-    .then(() => console.log(".csv created: ", csvFileName));
+    .then(() => {
+      console.log(".csv created: ", csvFileName);
+
+    })
+    .catch(err => {
+      console.error("error creating .csv", err);
+    });
 
   await worker.terminate();
 
 };
 
-const sortObject = obj => Object.keys(obj).sort().reduce((res, key) => (res[key] = obj[key], res), {})
+if (process.argv.length > 0) {
+  console.log("Using CLI");
+  const [society, eventName, eventDate, ...screenShots] = process.argv.slice(2);
+  scoreboardScrape({
+    society,
+    eventName,
+    eventDate,
+    screenShots
+  });
+}
+
+
+
+module.exports = {
+  scoreboardScrape
+};
+
+
+
+
+
+
 // tessList(scoreList);
 
 // (async() => {
