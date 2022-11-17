@@ -18,7 +18,10 @@
   "homepage": "https://github.com/weliver/pga-ocr#readme",
   "dependencies": {
     "bufferutil": "^4.0.7",
+    "canvas": "^2.10.2",
     "discord.js": "^14.6.0",
+    "sharp": "^0.31.2",
+    "tesseract.js": "^3.0.3",
     "utf-8-validate": "^5.0.10"
   },
   "devDependencies": {
