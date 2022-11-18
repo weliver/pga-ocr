@@ -17,7 +17,7 @@ const mockInput = {
 };
 
 
-const scoreboardScraper = async (
+const leaderboardScraper = (
   params
 ) => processImages(params.screenshots)
   .then(res => tessList(res, params))
@@ -190,14 +190,14 @@ const tessList = async (images, params) => {
 // if (process.argv.length > 0) {
 //   console.log("Using CLI");
 //   const [eventName, ...screenshots] = process.argv.slice(2);
-//   scoreboardScraper({
+//   leaderboardScraper({
 //     eventName,
 //     screenshots
 //   });
 // }
-// scoreboardScraper(mockInput);
+// leaderboardScraper(mockInput);
 
 
 module.exports = {
-  scoreboardScraper
+  leaderboardScraper
 };

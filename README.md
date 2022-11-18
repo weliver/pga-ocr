@@ -1,4 +1,4 @@
-# Scoreboard OCR
+# golf-bot & Leaderboard Scraper
 So many societies, so much data entry, so much opportunity to make life a little easier and our daily competitions more fun!
 
 ## Objective

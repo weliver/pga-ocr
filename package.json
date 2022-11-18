@@ -1,7 +1,7 @@
 {
   "name": "pga-ocr",
-  "version": "0.0.2",
-  "description": "An OCR for scraping PGA scoreboard data",
+  "version": "0.0.3",
+  "description": "A Discord bot with an OCR tool for scraping PGA2K23 leaderboard data.",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"

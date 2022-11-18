@@ -1,16 +1,16 @@
 const path = require('node:path');
 const { SlashCommandBuilder, AttachmentBuilder } = require('discord.js');
 
-const { scoreboardScraper } = require('../scoreboard-scraper.js');
+const { leaderboardScraper } = require('../leaderboard-scraper.js');
 
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName('scoreboard')
-    .setDescription('Process scoreboard images.')
+    .setName('leaderboard')
+    .setDescription('Process leaderboard images.')
     .addStringOption(option =>
       option
         .setName('eventname')
-        .setDescription('name of society event')
+        .setDescription('Something nice and descriptive for your records.')
     ),
   async execute(interaction) {
 
@@ -20,36 +20,34 @@ module.exports = {
       content: `Upload image(s) for ${eventName}`,
       fetchReply: true
     }).then(() => {
-      console.log("inside reply then");
       interaction.channel.awaitMessages({
-        filter: m => {
-          return true;
-        },
+        filter: m => m.author.id === interaction.user.id,
         max: 1,
         time: 40000,
         errors: ['time']
-      }).then(async collected => {
-        // console.log("collected messages", collected);
-
-        console.log("collected attachments", collected.first().attachments);
-
-        interaction.followUp('Processing message...');
-
+      }).then(collected => {
         try {
-          if (collected.first().attachments) {
+          if (collected.first().attachments.size > 0) {
+            interaction.followUp('Woot! Hang tight while I process your screenshots...');
 
-            const scoreboardParams = {
+            const params = {
               eventName: eventName,
               screenshots: collected.first().attachments.map(att => att.url)
             };
-            await scoreboardScraper(scoreboardParams).then(res => {
+
+            leaderboardScraper(params).then(res => {
               if (res) {
                 const file = new AttachmentBuilder(path.join('public', 'csv', res));
                 interaction.channel.send({ files: [file] });
+              } else {
+                interaction.followUp("Well that's awkward... I don't have a .csv for you :-/ Sorry! I'll have macgreg0r check it out.")
               }
             });
+          } else {
+            interaction.followUp("Hmm, I need images to scrape. Words are so boring!");
           }
         } catch (e) {
+          interaction.followUp("Error :( Something broke while scraping these images. I'll ping macgreg0r to take a look.", e);
           console.error("Error submitting uploads to scraper.", e);
         }
       })
