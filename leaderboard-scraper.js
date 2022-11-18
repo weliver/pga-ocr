@@ -6,8 +6,8 @@ const sharp = require('sharp');
 const Tesseract = require('tesseract.js');
 
 
-const csvDir = './public/csv';
-const imgDir = './public/images/processed';
+const csvDir = path.join(__dirname, 'public', 'csv');
+const imgDir = path.join(__dirname, 'public', 'images', 'processed');
 
 [csvDir, imgDir].forEach(dir => {
   if (!fs.existsSync(dir)) {
@@ -201,14 +201,27 @@ const resultsToCsv = async (output, params) => {
       console.error("error creating .csv", err);
     });
   return csv;
-}
+};
 
-const clean = async () => {
+const clean = () => {
   console.log("Clearing image directory");
-  for (const file of await fs.readdir(imgDir)) {
-    await fs.unlink(path.join(imgDir, file));
-  }
-}
+  // @todo Clean up csv dir eventually
+  [imgDir].forEach(dir => {
+
+    fs.readdir(dir, (err, files) => {
+      console.log("dir", dir);
+      console.log("files...", files)
+      if (err) throw err;
+
+      for (const file of files) {
+        fs.unlink(path.join(dir, file), (err) => {
+          if (err) throw err;
+        });
+      }
+    });
+  });
+
+};
 
 // For testing w/ CLI
 // if (process.argv.length > 0) {
@@ -228,7 +241,9 @@ const leaderboardScraper = (
   .then(recognizeImages)
   .then(res => resultsToCsv(res, params))
   .catch(err => console.error("error", err))
-  .finally(clean);
+  .finally(() => {
+    clean();
+  });
 
 module.exports = {
   leaderboardScraper

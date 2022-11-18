@@ -1,6 +1,6 @@
 {
   "name": "pga-ocr",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "A Discord bot with an OCR tool for scraping PGA2K23 leaderboard data.",
   "main": "index.js",
   "scripts": {
