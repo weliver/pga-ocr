@@ -203,6 +203,13 @@ const resultsToCsv = async (output, params) => {
   return csv;
 }
 
+const clean = async () => {
+  console.log("Clearing image directory");
+  for (const file of await fs.readdir(imgDir)) {
+    await fs.unlink(path.join(imgDir, file));
+  }
+}
+
 // For testing w/ CLI
 // if (process.argv.length > 0) {
 //   console.log("Using CLI");
@@ -220,7 +227,8 @@ const leaderboardScraper = (
 ) => processImages(params.screenshots)
   .then(recognizeImages)
   .then(res => resultsToCsv(res, params))
-  .catch(err => console.error("error", err));
+  .catch(err => console.error("error", err))
+  .finally(clean);
 
 module.exports = {
   leaderboardScraper
