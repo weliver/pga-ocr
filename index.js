@@ -15,7 +15,6 @@ const client = new Client({
   ]
 });
 // Log in to Discord with your client's token
-console.log("token", process.env);
 client.login(token);
 
 const eventsPath = path.join(__dirname, 'events');

@@ -130,7 +130,7 @@ const processImages = async (images) => {
 
 const scheduler = Tesseract.createScheduler();
 const worker1 = Tesseract.createWorker();
-const worker2 = Tesseract.createWorker();
+// const worker2 = Tesseract.createWorker();
 
 const tessList = async (images, params) => {
 
@@ -138,12 +138,11 @@ const tessList = async (images, params) => {
   await worker1.load();
   await worker1.loadLanguage('eng');
   await worker1.initialize('eng');
-  await worker2.load();
-  await worker2.loadLanguage('eng');
-  await worker2.initialize('eng');
-
   scheduler.addWorker(worker1);
-  scheduler.addWorker(worker2);
+  // await worker2.load();
+  // await worker2.loadLanguage('eng');
+  // await worker2.initialize('eng');
+  // scheduler.addWorker(worker2);
 
   const output = {};
 
