@@ -1,3 +1,4 @@
+require('dotenv').config();
 const fs = require('node:fs');
 const path = require('node:path');
 // Require the necessary discord.js classes
@@ -14,6 +15,7 @@ const client = new Client({
   ]
 });
 // Log in to Discord with your client's token
+console.log("token", process.env);
 client.login(token);
 
 const eventsPath = path.join(__dirname, 'events');
