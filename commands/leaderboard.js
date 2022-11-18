@@ -17,7 +17,7 @@ module.exports = {
     const eventName = interaction.options.getString('eventname') ?? 'society-event';
 
     await interaction.reply({
-      content: `Upload image(s) for ${eventName}`,
+      content: `Ready to receive! Upload one or more screenshots of your society event leaderboard: ${eventName}`,
       fetchReply: true
     }).then(() => {
       interaction.channel.awaitMessages({

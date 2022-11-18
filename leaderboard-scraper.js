@@ -86,6 +86,7 @@ const processImages = async (images) => {
           const areaCropFile = path.join(__dirname, 'public', 'images', 'processed', `${ref}-${area}.jpg`);
           promises.push(
             sharp(ib)
+              .resize(1920)
               .extract({
                 ...captureAreas[area],
                 top: (captureAreas[area].top + (60 * i)) + 15,
@@ -117,25 +118,38 @@ const processImages = async (images) => {
   return finalResult;
 };
 
-const worker = Tesseract.createWorker();
+const scheduler = Tesseract.createScheduler();
+const worker1 = Tesseract.createWorker();
+const worker2 = Tesseract.createWorker();
+
 const tessList = async (images, params) => {
-  await worker.load();
-  await worker.loadLanguage('eng');
-  await worker.initialize('eng');
+
+
+  await worker1.load();
+  await worker1.loadLanguage('eng');
+  await worker1.initialize('eng');
+  await worker2.load();
+  await worker2.loadLanguage('eng');
+  await worker2.initialize('eng');
+
+  scheduler.addWorker(worker1);
+  scheduler.addWorker(worker2);
 
   const output = {};
 
-  try {
-    for (const area of Object.keys(captureAreas)) {
-      for (const i of Object.keys(images)) {
-        const { data: { text } } = await worker.recognize(images[i][area]);
-        output[i] = {
-          ...output[i],
-          [area]: text.trim()
-        };
-      }
 
-    }
+  try {
+    await Promise.all(
+      Object.keys(captureAreas).map(async area => {
+        for (const i of Object.keys(images)) {
+          const { data: { text } } = await scheduler.addJob('recognize', images[i][area]);
+          output[i] = {
+            ...output[i],
+            [area]: text.trim()
+          };
+        }
+      })
+    );
   } catch (e) {
     console.error("Error in Tesseract recognize", e);
   }
@@ -180,8 +194,6 @@ const tessList = async (images, params) => {
     .catch(err => {
       console.error("error creating .csv", err);
     });
-  await worker.terminate();
-
   return finalFile;
 };
 
