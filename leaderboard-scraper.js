@@ -1,9 +1,19 @@
 const createCsvWriter = require('csv-writer').createObjectCsvWriter;
+const fs = require('fs');
 const fetch = require('node-fetch');
 const path = require('node:path');
 const sharp = require('sharp');
 const Tesseract = require('tesseract.js');
 
+
+const csvDir = './public/csv';
+const imgDir = './public/images/processed';
+
+[csvDir, imgDir].forEach(dir => {
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+});
 
 // For hacking about and testing your sanity
 const mockInput = {
