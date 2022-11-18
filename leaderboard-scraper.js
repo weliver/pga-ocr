@@ -25,14 +25,6 @@ const mockInput = {
     'https://cdn.discordapp.com/attachments/796765629856219146/1042914507032367154/kinetic-hd-4.jpg'
   ]
 };
-
-
-const leaderboardScraper = (
-  params
-) => processImages(params.screenshots)
-  .then(res => tessList(res, params))
-  .catch(err => console.error("error", err));
-
 // @TODO parameterize input based on image size.
 const captureAreas = {
   player: {
@@ -77,14 +69,15 @@ const captureAreas = {
 
 // @TODO Clean up your promises, buddy.
 const processImages = async (images) => {
-
   const scoreList = {};
-  const promises = [];
+
+  const sharpPromises = [];
 
   const fetchImages = await images.map(async img => {
     const imagePath = await fetch(img);
     return await imagePath.buffer();
   });
+
   await Promise.all(fetchImages).then(async fetchedImages => {
     let imgCount = 0;
     fetchedImages.map(ib => {
@@ -94,7 +87,7 @@ const processImages = async (images) => {
         for (let i = 0; i < 10; i++) {
           const ref = `${imgCount}${i}`;
           const areaCropFile = path.join(__dirname, 'public', 'images', 'processed', `${ref}-${area}.jpg`);
-          promises.push(
+          sharpPromises.push(
             sharp(ib)
               .resize(1920)
               .extract({
@@ -121,32 +114,32 @@ const processImages = async (images) => {
     });
   });
 
-  const finalResult = Promise.all(promises).then(e => {
+  return Promise.all(sharpPromises).then(e => {
     console.log("scorelist", scoreList);
     return scoreList;
   }).catch(err => console.error("finalResult fail", err));
-  return finalResult;
 };
 
-const scheduler = Tesseract.createScheduler();
-const worker1 = Tesseract.createWorker();
-// const worker2 = Tesseract.createWorker();
 
-const tessList = async (images, params) => {
+
+const recognizeImages = async (images) => {
+
+  const scheduler = Tesseract.createScheduler();
+  const worker1 = Tesseract.createWorker();
+  const worker2 = Tesseract.createWorker();
 
 
   await worker1.load();
   await worker1.loadLanguage('eng');
   await worker1.initialize('eng');
   scheduler.addWorker(worker1);
-  // await worker2.load();
-  // await worker2.loadLanguage('eng');
-  // await worker2.initialize('eng');
-  // scheduler.addWorker(worker2);
+
+  await worker2.load();
+  await worker2.loadLanguage('eng');
+  await worker2.initialize('eng');
+  scheduler.addWorker(worker2);
 
   const output = {};
-
-
   try {
     await Promise.all(
       Object.keys(captureAreas).map(async area => {
@@ -159,10 +152,15 @@ const tessList = async (images, params) => {
         }
       })
     );
+    await scheduler.terminate();
   } catch (e) {
     console.error("Error in Tesseract recognize", e);
   }
+  return output;
+};
 
+
+const resultsToCsv = async (output, params) => {
   const csvFileName = `${params.eventName}-${Date.now()}.csv`;
   const csvWriter = createCsvWriter({
     path: path.join(__dirname, 'public', 'csv', csvFileName),
@@ -193,8 +191,7 @@ const tessList = async (images, params) => {
       },
     ]
   });
-
-  const finalFile = await csvWriter
+  const csv = await csvWriter
     .writeRecords(Object.values(output))
     .then(c => {
       console.log(".csv created: ", csvFileName);
@@ -203,9 +200,8 @@ const tessList = async (images, params) => {
     .catch(err => {
       console.error("error creating .csv", err);
     });
-  return finalFile;
-};
-
+  return csv;
+}
 
 // For testing w/ CLI
 // if (process.argv.length > 0) {
@@ -218,6 +214,13 @@ const tessList = async (images, params) => {
 // }
 // leaderboardScraper(mockInput);
 
+
+const leaderboardScraper = (
+  params
+) => processImages(params.screenshots)
+  .then(recognizeImages)
+  .then(res => resultsToCsv(res, params))
+  .catch(err => console.error("error", err));
 
 module.exports = {
   leaderboardScraper
