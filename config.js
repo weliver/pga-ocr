@@ -1,5 +1,5 @@
-module.export = {
+module.exports = {
   "token": process.env.DISCORD_TOKEN,
   "clientId": process.env.CLIENT_ID,
-  "guildIds": process.env.GUILD_IDS
+  "guildIds": JSON.parse(process.env.GUILD_IDS)
 }

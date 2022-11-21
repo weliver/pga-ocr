@@ -15,60 +15,67 @@ const imgDir = path.join(__dirname, 'public', 'images', 'processed');
   }
 });
 
-// For hacking about and testing your sanity
-const mockInput = {
-  eventName: "Emerald Basin Reserve TGC",
-  screenshots: [
-    'https://cdn.discordapp.com/attachments/796765629856219146/1042914505979609178/kinetic-hd-1.jpg',
-    'https://cdn.discordapp.com/attachments/796765629856219146/1042914506302558279/kinetic-hd-2.jpg',
-    'https://cdn.discordapp.com/attachments/796765629856219146/1042914506642309250/kinetic-hd-3.jpg',
-    'https://cdn.discordapp.com/attachments/796765629856219146/1042914507032367154/kinetic-hd-4.jpg'
-  ]
-};
+// Position constants
+
+const GRID_TOP_PC = 340;
+const GRID_TOP_PS5 = 370;
+const ROW_HEIGHT = 60;
+
+const GRID_TOP = GRID_TOP_PS5;
 // @TODO parameterize input based on image size.
-const captureAreas = {
-  player: {
-    left: 270,
-    top: 340,
-    width: 350,
-    height: 30
-  },
-  round1: {
-    left: 1190,
-    top: 340,
-    width: 40,
-    height: 40
-  },
-  round2: {
-    left: 1320,
-    top: 340,
-    width: 40,
-    height: 40
-  },
-  round3: {
-    left: 1450,
-    top: 340,
-    width: 40,
-    height: 40
-  },
-  round4: {
-    left: 1580,
-    top: 340,
-    width: 40,
-    height: 40
-  },
-  final: {
-    left: 1710,
-    top: 340,
-    width: 60,
-    height: 40
-  }
+const getImageCaptureAreas = (system) => {
+
+
+  // @TODO not this way
+  let GRID_TOP = GRID_TOP_PC;
+  if (system === "DEFAULT") GRID_TOP = GRID_TOP_PC;
+  if (system === "PS5") GRID_TOP = GRID_TOP_PS5;
+
+  return {
+    player: {
+      left: 270,
+      top: GRID_TOP,
+      width: 350,
+      height: ROW_HEIGHT
+    },
+    round1: {
+      left: 1190,
+      top: GRID_TOP,
+      width: 40,
+      height: ROW_HEIGHT
+    },
+    round2: {
+      left: 1320,
+      top: GRID_TOP,
+      width: 40,
+      height: ROW_HEIGHT
+    },
+    round3: {
+      left: 1450,
+      top: GRID_TOP,
+      width: 40,
+      height: ROW_HEIGHT
+    },
+    round4: {
+      left: 1580,
+      top: GRID_TOP,
+      width: 40,
+      height: ROW_HEIGHT
+    },
+    final: {
+      left: 1710,
+      top: GRID_TOP,
+      width: 60,
+      height: ROW_HEIGHT
+    }
+  };
+
 };
-
-
 
 // @TODO Clean up your promises, buddy.
-const processImages = async (images) => {
+const processImages = async (params) => {
+  const images = params.screenshots;
+  const captureAreas = getImageCaptureAreas(params.system);
   const scoreList = {};
 
   const sharpPromises = [];
@@ -92,7 +99,7 @@ const processImages = async (images) => {
               .resize(1920)
               .extract({
                 ...captureAreas[area],
-                top: (captureAreas[area].top + (60 * i)) + 15,
+                top: captureAreas[area].top + (ROW_HEIGHT * i),
               })
               .negate()
               .grayscale()
@@ -122,7 +129,8 @@ const processImages = async (images) => {
 
 
 
-const recognizeImages = async (images) => {
+const recognizeImages = async (images, params) => {
+  const captureAreas = getImageCaptureAreas(params.system);
 
   const scheduler = Tesseract.createScheduler();
   const worker1 = Tesseract.createWorker();
@@ -194,7 +202,9 @@ const resultsToCsv = async (output, params) => {
   const csv = await csvWriter
     .writeRecords(Object.values(output))
     .then(c => {
-      console.log(".csv created: ", csvFileName);
+      if (process.env.NODE_ENV === "development") {
+        console.log(".csv created: ", csvFileName);
+      }
       return csvFileName;
     })
     .catch(err => {
@@ -210,7 +220,7 @@ const clean = () => {
 
     fs.readdir(dir, (err, files) => {
       console.log("dir", dir);
-      console.log("files...", files)
+      console.log("files...", files);
       if (err) throw err;
 
       for (const file of files) {
@@ -223,28 +233,52 @@ const clean = () => {
 
 };
 
-// For testing w/ CLI
-// if (process.argv.length > 0) {
-//   console.log("Using CLI");
-//   const [eventName, ...screenshots] = process.argv.slice(2);
-//   leaderboardScraper({
-//     eventName,
-//     screenshots
-//   });
-// }
-// leaderboardScraper(mockInput);
-
-
 const leaderboardScraper = (
   params
-) => processImages(params.screenshots)
-  .then(recognizeImages)
-  .then(res => resultsToCsv(res, params))
+) => processImages(params)
+  .then(recognizeImages(params))
+  .then(resultsToCsv(params))
   .catch(err => console.error("error", err))
   .finally(() => {
-    clean();
+    if (process.env.NODE_ENV === "production") {
+      clean();
+    }
   });
 
 module.exports = {
   leaderboardScraper
+};
+
+// Testing Tools
+
+// mock input hacking about and testing your sanity
+const mockInput = {
+  // system: 'PC',
+  // system: 'PS5',
+  eventName: "RFR PS5",
+  //PS5 input
+  screenshots: [
+    'https://cdn.discordapp.com/attachments/796765629856219146/1042914505979609178/kinetic-hd-1.jpg',
+    // 'https://media.discordapp.net/attachments/1042937715869626408/1044055281853792297/rfrps1.png',
+    // 'https://media.discordapp.net/attachments/1042937715869626408/1044055282164183101/rfrps2.png',
+    // 'https://media.discordapp.net/attachments/1042937715869626408/1044055282487140415/rfrps3.png',
+    // 'https://media.discordapp.net/attachments/1042937715869626408/1044055282847842416/rfrps4.png',
+    // 'https://media.discordapp.net/attachments/1042937715869626408/1044055283208560650/rfrps5.png',
+    // 'https://media.discordapp.net/attachments/1042937715869626408/1044055283590234122/rfrps6.png'
+  ]
+  // screenshots: [
+  //   'https://cdn.discordapp.com/attachments/796765629856219146/1042914506302558279/kinetic-hd-2.jpg',
+  //   'https://cdn.discordapp.com/attachments/796765629856219146/1042914506642309250/kinetic-hd-3.jpg',
+  //   'https://cdn.discordapp.com/attachments/796765629856219146/1042914507032367154/kinetic-hd-4.jpg'
+  // ]
+};
+
+// For testing w/ CLI
+if (process.env.NODE_ENV === "development" && process.argv.slice(2).length > 0) {
+  console.log("Using CLI");
+  if (process.argv.slice(2)[0] === "test") {
+    console.log("Testing w/ mock data: ", mockInput);
+    // const [eventName, ...screenshots] = process.argv.slice(2);
+    leaderboardScraper(mockInput);
+  }
 };

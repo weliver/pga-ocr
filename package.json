@@ -4,8 +4,9 @@
   "description": "A Discord bot with an OCR tool for scraping PGA2K23 leaderboard data.",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "NODE_ENV=production node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "test-scraper": "NODE_ENV=development node leaderboard-scraper.js test"
   },
   "repository": {
     "type": "git",

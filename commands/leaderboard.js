@@ -28,7 +28,7 @@ module.exports = {
       }).then(collected => {
         try {
           if (collected.first().attachments.size > 0) {
-            interaction.followUp('Woot! Hang tight while I process your screenshots...');
+            interaction.followUp(`Woot! Hang tight while I process your screenshots`);
 
             const params = {
               eventName: eventName,
@@ -40,6 +40,7 @@ module.exports = {
                 const file = new AttachmentBuilder(path.join('public', 'csv', res));
                 interaction.channel.send({ files: [file] });
               } else {
+                console.log("Error sent:  no .csv");
                 interaction.followUp("Well that's awkward... I don't have a .csv for you :-/ Sorry! I'll have macgreg0r check it out.")
               }
             });

@@ -15,7 +15,7 @@ const client = new Client({
   ]
 });
 // Log in to Discord with your client's token
-client.login(token);
+client.login(process.env.DISCORD_TOKEN);
 
 const eventsPath = path.join(__dirname, 'events');
 const eventFiles = fs.readdirSync(eventsPath).filter(file => file.endsWith('.js'));
