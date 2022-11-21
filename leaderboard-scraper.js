@@ -25,43 +25,44 @@ const mockInput = {
     'https://cdn.discordapp.com/attachments/796765629856219146/1042914507032367154/kinetic-hd-4.jpg'
   ]
 };
+const ROW_HEIGHT = 60;
 // @TODO parameterize input based on image size.
 const captureAreas = {
   player: {
     left: 270,
     top: 340,
     width: 350,
-    height: 30
+    height: ROW_HEIGHT
   },
   round1: {
     left: 1190,
     top: 340,
     width: 40,
-    height: 40
+    height: ROW_HEIGHT
   },
   round2: {
     left: 1320,
     top: 340,
     width: 40,
-    height: 40
+    height: ROW_HEIGHT
   },
   round3: {
     left: 1450,
     top: 340,
-    width: 40,
-    height: 40
+    width: ROW_HEIGHT,
+    height: ROW_HEIGHT
   },
   round4: {
     left: 1580,
     top: 340,
     width: 40,
-    height: 40
+    height: ROW_HEIGHT
   },
   final: {
     left: 1710,
     top: 340,
     width: 60,
-    height: 40
+    height: ROW_HEIGHT
   }
 };
 
@@ -92,7 +93,7 @@ const processImages = async (images) => {
               .resize(1920)
               .extract({
                 ...captureAreas[area],
-                top: (captureAreas[area].top + (60 * i)) + 15,
+                top: (captureAreas[area].top + (ROW_HEIGHT * i)),
               })
               .negate()
               .grayscale()
